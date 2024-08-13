@@ -42,6 +42,29 @@ function App() {
     }
   }
 
+  const fetchBalance = async (address) => {
+    try {
+      const response = await fetch('https://api.devnet.solana.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getBalance',
+          params: [address, { "encoding": "base58" }]
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Balance : ${data.result.value / 1000000000}`);
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  };
+
   return (
     <div className=' w-full min-h-screen bg-zinc-800 text-white p-10 flex flex-col items-center gap-10'>
       <Toaster position='bottom-center' toastOptions={{ className: 'bg-zinc-700 text-white ' }} />
@@ -91,9 +114,10 @@ function App() {
                 <p>Path : {wallet.path}</p>
               </div>
             </div>
-            {/* <button
+            <button
               className=' px-3 py-2 bg-zinc-700 hover:bg-zinc-500 rounded-r-md'
-            >Check Balance</button> */}
+              onClick={() => fetchBalance(wallet.publicKey)}
+            >Check Balance</button>
           </div>
         )
         )}
