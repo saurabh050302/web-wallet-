@@ -9,6 +9,7 @@ import nacl from "tweetnacl";
 import { generateMnemonic, mnemonicToSeedSync } from "bip39";
 import { derivePath } from "ed25519-hd-key";
 import { Keypair } from "@solana/web3.js";
+import { Wallet, HDNodeWallet } from "ethers";
 
 function App() {
 
@@ -35,37 +36,38 @@ function App() {
     try {
       if (mnemonic.split(" ").length != 12) throw new Error("Invalid Mnemonic")
       const seed = mnemonicToSeedSync(mnemonic);
+      let newWallet;
 
       if (selectedChain == "SOL") {
         const path = `m/44'/501'/${wallets.SOL.length}'/0'`;
         const derivedSeed = derivePath(path, seed.toString("hex")).key;
         const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
         const kp = Keypair.fromSecretKey(secret);
-        const newWallet = {
+        newWallet = {
           path,
           publicKey: kp.publicKey.toBase58(),
           secretKey: kp.secretKey.toString('hex')
         }
-        setWalletsArray([...walletsArray, newWallet]);
         setWallets({ ...wallets, SOL: [...wallets.SOL, newWallet] });
 
       } else if (selectedChain == "ETH") {
         const path = `m/44'/60'/${wallets.ETH.length}'/0'`;
-        const derivedSeed = derivePath(path, seed.toString("hex")).key;
-        const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
-        const kp = Keypair.fromSecretKey(secret);
-        const newWallet = {
+        const hdNode = HDNodeWallet.fromSeed(seed);
+        const child = hdNode.derivePath(path);
+        const privateKey = child.privateKey;
+        const wallet = new Wallet(privateKey);
+        newWallet = {
           path,
-          publicKey: kp.publicKey.toString("hex"),
-          secretKey: kp.secretKey.toString('hex')
+          publicKey: wallet.address,
+          secretKey: wallet.privateKey
         }
-        setWalletsArray([...walletsArray, newWallet]);
-        setWallets({ ...wallets, ETH: [...wallets.SOL, newWallet] });
-
-
+        setWallets({ ...wallets, ETH: [...wallets.ETH, newWallet] });
       } else {
         throw new Error("Unsupported Network!");
       }
+
+      console.log(newWallet);
+      setWalletsArray([...walletsArray, newWallet]);
       toast.success(`${selectedChain} Wallet added!`)
     } catch (error) {
       toast.error(error.message)
@@ -110,8 +112,8 @@ function App() {
           <h1 className='text-3xl font-semibold tracking-wide'>Web Wallet</h1>
         </div>
         <select value={selectedChain} onChange={handleChainChange} className=' p-2 outline-none bg-zinc-800 rounded-md'>
-          <option value="SOL">SOL</option>
-          <option value="ETH">ETH</option>
+          <option value="SOL">SOL (Devnet)</option>
+          <option value="ETH">ETH (Sepolia)</option>
         </select>
 
       </div>
