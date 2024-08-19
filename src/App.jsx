@@ -66,7 +66,6 @@ function App() {
         throw new Error("Unsupported Network!");
       }
 
-      console.log(newWallet);
       setWalletsArray([...walletsArray, newWallet]);
       toast.success(`${selectedChain} Wallet added!`)
     } catch (error) {
@@ -75,33 +74,46 @@ function App() {
   }
 
   const fetchBalance = async (address) => {
-    console.log("fetch balance");
+    try {
+      if (selectedChain != "SOL" && selectedChain != "ETH") throw new Error("Unsupported Network!")
 
-    // try {
-    //   const response = await fetch('https://api.devnet.solana.com', {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //     },
-    //     body: JSON.stringify({
-    //       jsonrpc: '2.0',
-    //       id: 1,
-    //       method: 'getBalance',
-    //       params: [address, { "encoding": "base58" }]
-    //     }),
-    //   });
-    //   if (response.ok) {
-    //     const data = await response.json();
-    // toast.success(`Balance : ${data.result.value / 1000000000} ${selectedChain}`);
-    //   }
-    // } catch (error) {
-    //   toast.error(error.message)
-    // }
+      const myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+
+      const raw = JSON.stringify({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": selectedChain == "SOL" ? "getBalance" : "eth_getBalance",
+        "params": selectedChain == "SOL" ? [address] : [address, "latest"]
+      });
+
+      const requestOptions = {
+        method: "POST",
+        headers: myHeaders,
+        body: raw,
+        redirect: "follow"
+      };
+
+      const URL_BASE = selectedChain == "SOL" ? "solana-devnet" : "eth-sepolia";
+
+      const res = await fetch(`https://${URL_BASE}.g.alchemy.com/v2/DiYXA3ASAHJzyAoRKhsz72a98EYYwSTU`, requestOptions);
+      if (!res.ok) throw new Error("Server Error!");
+      const result = await res.json();
+      const balance = selectedChain == "SOL" ? result.result.value / 1000000000 : Number(result.result) / 1000000000000000000;
+      // console.log(result.result.value); // SOL json
+      // console.log(Number(result.result)); // ETH json
+      // console.log(balance.toFixed(4)); // to control decimals
+
+      toast.success(`Balance : ${balance.toFixed(4)} ${selectedChain}`);
+    } catch (error) {
+      toast.error(error.message);
+    }
+
   };
 
   return (
     <div className=' w-full min-h-screen bg-zinc-900 text-white p-10 flex flex-col items-center gap-10'>
-      <Toaster position='bottom-center' toastOptions={{ className: 'bg-zinc-800 text-white ' }} />
+      <Toaster position='bottom-center' toastOptions={{ className: 'bg-zinc-800 text-white rounded-sm' }} />
 
       <div className='flex justify-between items-center w-full'>
         <a href="https://github.com/saurabh050302/web-wallet-" target='/'>
@@ -144,7 +156,7 @@ function App() {
           <div key={index} className='flex w-3/4 justify-between bg-zinc-800 gap-4 rounded-md'>
             <div className='flex'>
               <button
-                className=' px-3 py-2 bg-zinc-800 font-bold rounded-l-md hover:bg-zinc-600'
+                className=' px-3 py-2 font-bold rounded-l-md hover:bg-zinc-600'
                 onClick={() => { navigator.clipboard.writeText(wallet.publicKey), toast.success("Address copied!") }}
               >
                 <img src={copyIcon} className=' w-8 h-8' />
@@ -155,7 +167,7 @@ function App() {
               </div>
             </div>
             <button
-              className=' px-3 py-2 bg-zinc-800 hover:bg-zinc-600 rounded-r-md'
+              className=' px-3 py-2 hover:bg-zinc-600 rounded-r-md'
               onClick={() => fetchBalance(wallet.publicKey)}
             >Check Balance</button>
           </div>
