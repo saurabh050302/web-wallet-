@@ -25,7 +25,7 @@ function generateSolanaWallet(seed, index) {
     return {
         path,
         publicKey: kp.publicKey.toBase58(),
-        secretKey: kp.secretKey.toString('hex')
+        secretKey: kp.secretKey.toString()
     };
 }
 
